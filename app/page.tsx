@@ -54,7 +54,6 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!prevIsConnectedRef.current && isConnected) {
-      showToast(`Connected to ${urlInput}`, 'success', 5000);
     } else if (prevIsConnectedRef.current && !isConnected && !error) {
       showToast('Disconnected.', 'info');
     } else if (error && error !== prevErrorRef.current) {

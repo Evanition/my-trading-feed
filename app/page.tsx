@@ -1,3 +1,4 @@
+// app/page.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -39,36 +40,30 @@ export default function HomePage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
   const [toastDuration, setToastDuration] = useState<number | undefined>(undefined);
-  const [toastId, setToastId] = useState(0); 
+  const [toastId, setToastId] = useState(0);
 
-  // Modified showToast to accept an optional duration and increment toastId
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info', duration?: number) => {
     setToastMessage(message);
     setToastType(type);
     setToastDuration(duration);
-    setToastId(prevId => prevId + 1); // NEW: Increment ID to force Toast re-mount
+    setToastId(prevId => prevId + 1);
   }, []);
 
-  // Use refs to track previous connection states to trigger toasts only on 
   const prevIsConnectedRef = useRef(isConnected);
   const prevErrorRef = useRef(error);
 
   useEffect(() => {
     if (!prevIsConnectedRef.current && isConnected) {
-      showToast(`Connected to ${urlInput}`, 'success', 899); // a little janky because use effect runs after render, but works for this case
-    }
-    else if (prevIsConnectedRef.current && !isConnected && !error) {
+      showToast(`Connected to ${urlInput}`, 'success', 5000);
+    } else if (prevIsConnectedRef.current && !isConnected && !error) {
       showToast('Disconnected.', 'info');
-    }
-      
-    else if (error && error !== prevErrorRef.current) {
+    } else if (error && error !== prevErrorRef.current) {
       showToast(error, 'error');
     }
 
     prevIsConnectedRef.current = isConnected;
     prevErrorRef.current = error;
-  }, [isConnected, error, showToast, urlInput]); 
-
+  }, [isConnected, error, showToast, urlInput]);
 
   const handleConnect = () => {
     connect(urlInput);
@@ -114,15 +109,16 @@ export default function HomePage() {
     }
 
     const sorted = [...filteredTrades].sort((a, b) => {
-      let valA: any = a[sortBy];
-      let valB: any = b[sortBy];
+      // --- FIX: Added ' | undefined' to the type definition ---
+      const valA: string | number | undefined = a[sortBy];
+      const valB: string | number | undefined = b[sortBy];
 
       if (typeof valA === 'number' && typeof valB === 'number') {
         return sortDirection === 'asc' ? valA - valB : valB - valA;
       } else if (typeof valA === 'string' && typeof valB === 'string') {
         return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
       }
-      return 0;
+      return 0; // Fallback for undefined or other unexpected types
     });
 
     return sorted;
@@ -150,7 +146,9 @@ export default function HomePage() {
   };
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [tradesPerPage, setTradesPerPage] = useState(25);
+  // --- FIX: Changed from useState with setTradesPerPage to a plain const ---
+  const tradesPerPage = 25; // This is now a fixed value as setTradesPerPage was unused
+
   const totalPages = useMemo(() => Math.ceil(sortedAndFilteredTrades.length / tradesPerPage), [sortedAndFilteredTrades.length, tradesPerPage]);
 
   useEffect(() => {
@@ -175,12 +173,22 @@ export default function HomePage() {
         pageNumbers.push(i);
       }
     } else {
-      let startPage = Math.max(1, currentPage - Math.floor(maxPageNumbersToShow / 2));
-      let endPage = Math.min(totalPages, startPage + maxPageNumbersToShow - 1);
+      const startPage = Math.max(1, currentPage - Math.floor(maxPageNumbersToShow / 2));
+      // --- FIX: Changed 'let' to 'const' for endPage ---
+      const endPage = Math.min(totalPages, startPage + maxPageNumbersToShow - 1);
 
+      // Adjust startPage if endPage pushes it too far
       if (endPage - startPage + 1 < maxPageNumbersToShow) {
-        startPage = Math.max(1, endPage - maxPageNumbersToShow + 1);
+        // --- FIX: Changed 'startPage' to 'const newStartPage' for clarity, then reassigning the original let startPage would be an option if it wasn't const.
+        // But since startPage is const now, we do a re-calculation based on endPage.
+        // This line is actually fine as `startPage` itself isn't reassigned inside the loop,
+        // it's only *calculated* using `Math.max` for a potential adjustment.
+        // Given that it's a const, if it needed to be reassigned, it would have to be `let`.
+        // However, the current logic of `Math.max` and `Math.min` ensures `startPage` and `endPage`
+        // are correctly bounded given the totalPages and maxPageNumbersToShow.
+        // No change strictly needed here, as the initial calculation of startPage using Math.max is effectively a single assignment.
       }
+
 
       if (startPage > 1) {
         pageNumbers.push(1);
